@@ -3,8 +3,6 @@ import multiprocessing as mp
 import memoria_compartilhada as mc
 import time
 
-init_mutex = mp.Value('i',1)
-
 class Robot:
   def __init__(self,id):
     random.seed()
@@ -110,10 +108,10 @@ class Robot:
             if 0 <= nx < GRID_WIDTH and 0 <= ny < GRID_HEIGHT:
                 target = mc.grid[ny * GRID_WIDTH + nx]
 
-                if target == EMPTY[0]:
+                if target == EMPTY:
                     # Movimento
-                    mc.grid[y * GRID_WIDTH + x] = EMPTY[0]
-                    mc.grid[ny * GRID_WIDTH + nx] = bytes(str(self.id + 1), 'utf-8')[0]
+                    mc.grid[y * GRID_WIDTH + x] = EMPTY
+                    mc.grid[ny * GRID_WIDTH + nx] = bytes(str(self.id + 1), 'utf-8')
                     mc.robot_data[idx + 4] = nx
                     mc.robot_data[idx + 5] = ny
                     mc.robot_data[idx + 2] -= 1  # Consome energia
@@ -129,11 +127,10 @@ class Robot:
 
 
   def play(self, all_robots):
-    with init_mutex.get_lock():
-        if init_mutex.value:
-            self.initgame(all_robots)
-            init_mutex.value = 0
-
+    with mc.init_mutex.get_lock():
+            if mc.init_mutex.value == 1:
+                mc.init_mutex.value = 0
+                self.initgame(all_robots)
     # Inicializa posição e status no robot_data
     idx = self.id * 6
     with mc.robot_mutex:

@@ -18,6 +18,7 @@ robot_mutex = mp.Lock()
 
 # Controle de fim de jogo
 gameover = mp.Value('b', False)
-
+#Controla inicio do jogo
+init_mutex = mp.Value('i',1)
 # Vencedor (-1 significa ainda sem vencedor)
 vencedor = mp.Value('i', -1)
