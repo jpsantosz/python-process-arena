@@ -3,9 +3,9 @@ import memoria_compartilhada as mc
 from robots import Robot
 import viewer
 
-def run_robot(rid):
-    robo1 = robots.Robot(1)
-    robo1.play()
+def run_robot(robot, all_robots):
+    robot.play(all_robots)
+
 
 if __name__ == "__main__":
     viewer_process = mp.Process(target=viewer.viewer_loop)
@@ -15,10 +15,12 @@ if __name__ == "__main__":
 
     processes = []
     for robot in robots:
-        p = mp.Process(target=robot.play, args=(robots,))
+        p = mp.Process(target=run_robot, args=(robot, robots))
         p.start()
         processes.append(p)
-
+        
+    for p in processes:
+        p.join()
 
     mc.gameover.value = True
     viewer_process.join()
