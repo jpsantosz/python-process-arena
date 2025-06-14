@@ -8,7 +8,8 @@ def run_robot(rid):
     robo1.play()
 
 if __name__ == "__main__":
-    viewer.printgrid()
+    viewer_process = mp.Process(target=viewer.viewer_loop)
+    viewer_process.start()
     
     robos = []
     for i in range(4):  # 4 robôs
@@ -20,3 +21,4 @@ if __name__ == "__main__":
         p.join()
 
     mc.gameover.value = True
+    viewer_process.join()

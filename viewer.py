@@ -4,10 +4,10 @@ import os
 
 def printgrid():
     os.system('cls' if os.name == 'nt' else 'clear')
-    for i in range(mc.LINE):
+    for i in range(mc.line):
         line = ""
-        for j in range(mc.COLUMN):
-            c = chr(mc.grid[i * mc.COLUMN + j])
+        for j in range(mc.colum):
+            c = mc.grid[i * mc.colum + j].decode()
             line += c
         print(line)
     print("\n")
