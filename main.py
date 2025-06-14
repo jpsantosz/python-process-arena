@@ -1,6 +1,6 @@
 import multiprocessing as mp
 import memoria_compartilhada as mc
-import robots
+from robots import Robot
 import viewer
 
 def run_robot(rid):
@@ -11,14 +11,14 @@ if __name__ == "__main__":
     viewer_process = mp.Process(target=viewer.viewer_loop)
     viewer_process.start()
     
-    robos = []
-    for i in range(4):  # 4 robôs
-        p = mp.Process(target=run_robot, args=(i,))
-        robos.append(p)
-        p.start()
+    robots = [Robot(i) for i in range(4)]
 
-    for p in robos:
-        p.join()
+    processes = []
+    for robot in robots:
+        p = mp.Process(target=robot.play, args=(robots,))
+        p.start()
+        processes.append(p)
+
 
     mc.gameover.value = True
     viewer_process.join()
