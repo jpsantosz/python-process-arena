@@ -1,6 +1,5 @@
 import random
 import multiprocessing as mp
-import viewer
 import memoria_compartilhada as mc
 import time
 
@@ -19,18 +18,16 @@ class Robot:
     pass
 
   def initgame(self, robots):
+    for i in range(1, mc.line-1):
+        for j in range(1, mc.colum-1):
+            mc.grid[i*mc.colum+j] = b' '
     for i in range(mc.line):
         if i == 0 or i == mc.line-1:
             for j in range(mc.colum):
                 mc.grid[i*mc.colum+j] =  b'#'
         else:
             mc.grid[i*mc.colum] =  b'#'
-            mc.grid[i*mc.colum+ mc.line-1] =  b'#'
-
-    for i in range(1, mc.line-1):
-        for j in range(1, mc.colum-1):
-            mc.grid[i*mc.colum+j] = b' '
-
+            mc.grid[i*mc.colum+ 19] =  b'#'
     for r in robots:
         while True:
             x = random.randint(1, 39)
@@ -40,7 +37,13 @@ class Robot:
                 r.x = x
                 r.y = y
                 break
-
+    for i in range(4):
+        while True:
+            x = random.randint(1, 39)
+            y = random.randint(1, 19)
+            if(mc.grid[x*mc.colum+y].decode() == ' '):
+                mc.grid[x*mc.colum+y] = bytes(str('*'), 'utf-8')[0:1]
+                break
 
   def duelo(id_a, id_b):
     with mc.robots_mutex:
