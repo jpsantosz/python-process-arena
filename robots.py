@@ -15,6 +15,8 @@ class Robot:
     self.speed = random.randint(1,5)
     self.id = id
     self.status = 1  # 1 = vivo, 0 = morto
+    self.x = -1
+    self.y = -1
     pass
 
   def initgame(self):
@@ -26,8 +28,17 @@ class Robot:
         mc.grid[i*mc.colum] =  b'#'
         mc.grid[i*mc.colum+ mc.line-1] =  b'#'
     for i in range(1,mc.line-1):
-      for j in range(1,mc.colum):
+      for j in range(1,mc.colum-1):
         mc.grid[i*mc.colum+j] = b' '
+    for r in range(4):
+      while True:
+        x = random.randint(1,39)
+        y = random.randint(1,19)
+        if(mc.grid[x*mc.colum+y].decode() == ' '):
+          mc.grid[x*mc.colum+y] = r.id.encode()
+          r.x = x
+          r.y = y
+          break
     pass
 
   def duelo(id_a, id_b):
