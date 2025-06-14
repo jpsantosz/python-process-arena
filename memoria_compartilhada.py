@@ -2,8 +2,8 @@ import multiprocessing as mp
 from ctypes import c_char
 
 # Dimensões do grid
-line = 40
-colum = 20
+line = 20
+colum = 40
 size = line * colum
 
 # Grid compartilhado

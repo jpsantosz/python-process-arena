@@ -27,11 +27,11 @@ class Robot:
                 mc.grid[i*mc.colum+j] =  b'#'
         else:
             mc.grid[i*mc.colum] =  b'#'
-            mc.grid[i*mc.colum+ 19] =  b'#'
+            mc.grid[i*mc.colum+ mc.colum-1] =  b'#'
     for r in robots:
         while True:
-            x = random.randint(1, 39)
-            y = random.randint(1, 19)
+            x = random.randint(1, mc.line-1)
+            y = random.randint(1, mc.colum-1)
             if(mc.grid[x*mc.colum+y].decode() == ' '):
                 mc.grid[x*mc.colum+y] = bytes(str(r.id + 1), 'utf-8')[0:1]
                 r.x = x
@@ -40,8 +40,8 @@ class Robot:
 
     for i in range(4):
         while True:
-            x = random.randint(1, 39)
-            y = random.randint(1, 19)
+            x = random.randint(1, mc.line-1)
+            y = random.randint(1, mc.colum-1)
             if(mc.grid[x*mc.colum+y].decode() == ' '):
                 mc.grid[x*mc.colum+y] = bytes(str('*'), 'utf-8')[0:1]
                 break
