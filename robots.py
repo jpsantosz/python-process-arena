@@ -32,8 +32,9 @@ class Robot:
             y = random.randint(1, mc.colum-1)
             if(mc.grid[x*mc.colum+y].decode() == ' '):
                 mc.grid[x*mc.colum+y] = bytes(str(r.id + 1), 'utf-8')[0:1]
-                r.x = x
-                r.y = y
+                idx = r.id * 6
+                mc.robot_data[idx + 4] = x
+                mc.robot_data[idx + 5] = y
                 break
 
     for i in range(4):
@@ -87,8 +88,8 @@ class Robot:
     EMPTY = b' '
     BATTERY = b'*'
     ENERGY_MAX = 100
-    GRID_WIDTH = mc.colum
-    GRID_HEIGHT = mc.line
+    MAX_LINE = mc.line
+    MAX_COLUM = mc.colum
 
     while mc.vencedor.value == -1 and self.status == 1:
         time.sleep(random.randint(1, 5) * 0.2)  # Delay de ação conforme a "velocidade"
@@ -98,24 +99,22 @@ class Robot:
             E = mc.robot_data[idx + 2]
 
             if E <= 0:
-                self.status = 0
+                mc.robot_data[idx + 3] = 0
                 return
 
             x, y = mc.robot_data[idx + 4], mc.robot_data[idx + 5]
             dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
             nx, ny = x + dx, y + dy
-
-            if 0 <= nx < GRID_WIDTH and 0 <= ny < GRID_HEIGHT:
-                target = mc.grid[ny * GRID_WIDTH + nx]
-
+            if 0 < nx < MAX_LINE and 0 < ny < MAX_COLUM:
+                target = mc.grid[ny * MAX_LINE + nx]
                 if target == EMPTY:
                     # Movimento
-                    mc.grid[y * GRID_WIDTH + x] = EMPTY
-                    mc.grid[ny * GRID_WIDTH + nx] = bytes(str(self.id + 1), 'utf-8')
+                    mc.grid[x * MAX_COLUM + y] = EMPTY
+                    mc.grid[nx * MAX_COLUM + ny] = bytes(str(self.id + 1), 'utf-8')
                     mc.robot_data[idx + 4] = nx
                     mc.robot_data[idx + 5] = ny
                     mc.robot_data[idx + 2] -= 1  # Consome energia
-
+                    
                 elif target == BATTERY[0]:
                     # Recarrega energia
                     mc.robot_data[idx + 2] = min(ENERGY_MAX, E + 20)
@@ -123,7 +122,7 @@ class Robot:
                 elif target.decode().isdigit():
                     enemy_id = int(target.decode()) - 1
                     if enemy_id != self.id:
-                        self.duel(self.id, enemy_id)
+                        self.duelo(self.id, enemy_id)
 
 
   def play(self, all_robots):
@@ -133,13 +132,10 @@ class Robot:
                 self.initgame(all_robots)
     # Inicializa posição e status no robot_data
     idx = self.id * 6
-    with mc.robot_mutex:
-        mc.robot_data[idx + 0] = self.id
-        mc.robot_data[idx + 1] = self.forca
-        mc.robot_data[idx + 2] = self.energy
-        mc.robot_data[idx + 3] = self.status
-        mc.robot_data[idx + 4] = self.x
-        mc.robot_data[idx + 5] = self.y
+    mc.robot_data[idx + 0] = self.id
+    mc.robot_data[idx + 1] = self.forca
+    mc.robot_data[idx + 2] = self.energy
+    mc.robot_data[idx + 3] = self.status
 
     # Inicia comportamento do robô
     self.sense_act()
