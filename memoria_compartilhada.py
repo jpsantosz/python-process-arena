@@ -5,7 +5,7 @@ from ctypes import c_char
 line = 20
 colum = 40
 size = line * colum
-battery =20
+battery =5
 # Grid compartilhado
 grid = mp.Array(c_char, size)
 
