@@ -16,3 +16,5 @@ def viewer_loop():
     while not mc.gameover.value:
         printgrid()
         time.sleep(0.2)
+    printgrid()
+    print(f"O vencedor é {mc.vencedor.value}")

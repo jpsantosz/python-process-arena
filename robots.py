@@ -1,5 +1,6 @@
 import random
 import multiprocessing as mp
+import threading
 import memoria_compartilhada as mc
 import time
 
@@ -48,50 +49,61 @@ class Robot:
                 mc.battery_mutex_xy[i*2+1] = y
                 break
 
-  def duelo(self,id_a, id_b):
-    with mc.robot_mutex:
+  def duelo(self, id_a, id_b):
         idx_a = id_a * 6
         idx_b = id_b * 6
 
-        fa = mc.robots[idx_a + 1]
-        ea = mc.robots[idx_a + 2]
-        fb = mc.robots[idx_b + 1]
-        eb = mc.robots[idx_b + 2]
+        fa = mc.robot_data[idx_a + 1]
+        ea = mc.robot_data[idx_a + 2]
+        fb = mc.robot_data[idx_b + 1]
+        eb = mc.robot_data[idx_b + 2]
 
         power_a = (2 * fa) + ea
         power_b = (2 * fb) + eb
 
         if power_a > power_b:
-            mc.robots[idx_b + 3] = 0  # morto
+            mc.robot_data[idx_b + 3] = 0
+            mc.vivos.value -= 1
+            mc.grid[mc.robot_data[idx_b + 4]*mc.colum + mc.robot_data[idx_b + 5]] = b' '
             print("Ganhei")
-            return id_a
         elif power_b > power_a:
-            mc.robots[idx_a + 3] = 0  # morto
+            mc.robot_data[idx_a + 3] = 0
+            mc.vivos.value -= 1
+            mc.grid[mc.robot_data[idx_a + 4]*mc.colum + mc.robot_data[idx_a + 5]] = b' '
             print("Perdi")
-            return id_b
         else:
-            mc.robots[idx_a + 3] = 0
-            mc.robots[idx_b + 3] = 0
-            print("2 morreu")
-            return None  
+            mc.robot_data[idx_a + 3] = 0
+            mc.robot_data[idx_b + 3] = 0
+            mc.vivos.value -= 2
+            mc.grid[mc.robot_data[idx_a + 4]*mc.colum + mc.robot_data[idx_a + 5]] = b' '
+            mc.grid[mc.robot_data[idx_b + 4]*mc.colum + mc.robot_data[idx_b + 5]] = b' '
+            print("2 morreu") 
           
-  def housekeeping(self,x,y):
+  def housekeeping(self):
     idx = self.id * 6
-    if  mc.robot_data[idx + 3] == 1 and not mc.gameover.value:
-        if mc.vivos.value == 1:
-            mc.vencedor.value = self.id
-            mc.gameover.value = True
-            return
-        time.sleep(1)  # Executa a cada 1 segundo
-        
-        # Reduz energia diretamente no array compartilhado
-        mc.robot_data[idx + 2] -= 1
-        # Verifica energia após redução
-        if mc.robot_data[idx + 2] <= 0:
-            mc.robot_data[idx + 3] = 0  # status = morto
-    if mc.robot_data[idx + 3] == 0:
-        mc.grid[x*mc.colum+y] = b' '
-        self.status = 0                
+    while not mc.gameover.value:
+        time.sleep(1)
+        with mc.grid_mutex, mc.robot_mutex:
+            # Verifica se ainda está vivo
+            if mc.robot_data[idx + 3] == 0:
+                break
+
+            #  Verifica se é o último vivo
+            if mc.vivos.value <= 1 and mc.robot_data[idx + 3] == 1:
+                mc.gameover.value = True
+                mc.vencedor.value = self.id+1
+                mc.grid[mc.robot_data[idx + 4]*mc.colum + mc.robot_data[idx + 5]] = bytes(str(self.id + 1), 'utf-8')
+                break  # ganhou, sai do loop
+
+            # Reduz energia
+            mc.robot_data[idx + 2] -= 1
+
+            # Verifica energia após redução
+            if mc.robot_data[idx + 2] <= 0:
+                mc.robot_data[idx + 3] = 0  # status = morto
+                mc.vivos.value -= 1
+                mc.grid[mc.robot_data[idx + 4]*mc.colum+mc.robot_data[idx + 5]] = b' '
+                self.status = 0            
     
   def sense_act(self):
     EMPTY = b' '
@@ -99,7 +111,6 @@ class Robot:
     ENERGY_MAX = 100
     MAX_LINE = mc.line
     MAX_COLUM = mc.colum
-    movement = self.speed
     idx = self.id * 6
     is_in_battery = -1
     while mc.vencedor.value == -1 and self.status == 1:
@@ -109,6 +120,8 @@ class Robot:
             
             #Autaliza o status
             self.status =  mc.robot_data[idx + 3]
+            if self.status == 0:
+                break
             x, y = mc.robot_data[idx + 4], mc.robot_data[idx + 5]
             dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
             nx, ny = x + dx, y + dy
@@ -149,10 +162,6 @@ class Robot:
                     if enemy_id != self.id:
                         print("Duelo")
                         self.duelo(self.id, enemy_id)
-                movement -= 1
-                if movement <= 0 or self.status == 0:
-                    self.housekeeping(mc.robot_data[idx + 4], mc.robot_data[idx + 5])
-                    movement = self.speed
 
   def play(self, all_robots):
     with mc.init_mutex.get_lock():
@@ -167,4 +176,11 @@ class Robot:
     mc.robot_data[idx + 3] = self.status
 
     # Inicia comportamento do robô
-    self.sense_act()
+    t1 = threading.Thread(target=self.sense_act)
+    t2 = threading.Thread(target=self.housekeeping)  # novo método contínuo
+    
+    t1.start()
+    t2.start()
+    
+    t1.join()
+    t2.join()
