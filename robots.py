@@ -37,12 +37,15 @@ class Robot:
                 mc.robot_data[idx + 5] = y
                 break
 
-    for i in range(4):
+    for i in range(mc.battery):
         while True:
             x = random.randint(1, mc.line-1)
             y = random.randint(1, mc.colum-1)
             if(mc.grid[x*mc.colum+y].decode() == ' '):
                 mc.grid[x*mc.colum+y] = bytes(str('*'), 'utf-8')[0:1]
+                mc.battery_mutex[i] = 1
+                mc.battery_mutex_xy[i*2] = x
+                mc.battery_mutex_xy[i*2+1] = y
                 break
 
   def duelo(self,id_a, id_b):
@@ -98,6 +101,7 @@ class Robot:
     MAX_COLUM = mc.colum
     movement = self.speed
     idx = self.id * 6
+    is_in_battery = -1
     while mc.vencedor.value == -1 and self.status == 1:
         time.sleep(random.randint(1, 5) * 0.2)  # Delay de ação conforme a "velocidade"
         
@@ -112,13 +116,32 @@ class Robot:
                 target = mc.grid[nx * MAX_COLUM + ny]
                 if target == EMPTY:
                     # Movimento
-                    mc.grid[x * MAX_COLUM + y] = EMPTY
+                    if is_in_battery != -1:
+                        mc.grid[x * MAX_COLUM + y] = BATTERY
+                        mc.battery_mutex[is_in_battery] = 1
+                        is_in_battery = -1
+                    else:
+                        mc.grid[x * MAX_COLUM + y] = EMPTY
                     mc.grid[nx * MAX_COLUM + ny] = bytes(str(self.id + 1), 'utf-8')
                     mc.robot_data[idx + 4] = nx
                     mc.robot_data[idx + 5] = ny
 
                 elif target == BATTERY:
                     # Recarrega energia
+                    is_a_battery = mc.get_battery_mutex(nx,ny)
+                    if mc.battery_mutex[is_a_battery] == 1:
+                        mc.battery_mutex[is_a_battery] = 0
+                        if is_in_battery != -1:
+                            mc.grid[x * MAX_COLUM + y] = BATTERY
+                            mc.battery_mutex[is_in_battery] = 1
+                        else:
+                            mc.grid[x * MAX_COLUM + y] = EMPTY
+                        is_in_battery = is_a_battery
+                    else:
+                        continue
+                    mc.grid[nx * MAX_COLUM + ny] = bytes(str(self.id + 1), 'utf-8')
+                    mc.robot_data[idx + 4] = nx
+                    mc.robot_data[idx + 5] = ny 
                     mc.robot_data[idx + 2] = min(ENERGY_MAX, mc.robot_data[idx + 2] + 20)
 
                 elif target.decode().isdigit():
