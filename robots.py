@@ -45,85 +45,91 @@ class Robot:
                 mc.grid[x*mc.colum+y] = bytes(str('*'), 'utf-8')[0:1]
                 break
 
-  def duelo(id_a, id_b):
-    with mc.robots_mutex:
-        idx_a = id_a * 8
-        idx_b = id_b * 8
+  def duelo(self,id_a, id_b):
+    with mc.robot_mutex:
+        idx_a = id_a * 6
+        idx_b = id_b * 6
 
-        fa = mc.robots[idx_a + 3]
-        ea = mc.robots[idx_a + 4]
-        fb = mc.robots[idx_b + 3]
-        eb = mc.robots[idx_b + 4]
+        fa = mc.robots[idx_a + 1]
+        ea = mc.robots[idx_a + 2]
+        fb = mc.robots[idx_b + 1]
+        eb = mc.robots[idx_b + 2]
 
         power_a = (2 * fa) + ea
         power_b = (2 * fb) + eb
 
         if power_a > power_b:
-            mc.robots[idx_b + 6] = 0  # morto
+            mc.robots[idx_b + 3] = 0  # morto
+            print("Ganhei")
             return id_a
         elif power_b > power_a:
-            mc.robots[idx_a + 6] = 0  # morto
+            mc.robots[idx_a + 3] = 0  # morto
+            print("Perdi")
             return id_b
         else:
-            mc.robots[idx_a + 6] = 0
-            mc.robots[idx_b + 6] = 0
+            mc.robots[idx_a + 3] = 0
+            mc.robots[idx_b + 3] = 0
+            print("2 morreu")
             return None  
           
-  def housekeeping(self):
-    
-    while self.status == 1 and not mc.gameover.value:
+  def housekeeping(self,x,y):
+    idx = self.id * 6
+    if  mc.robot_data[idx + 3] == 1 and not mc.gameover.value:
+        if mc.vivos.value == 1:
+            mc.vencedor.value = self.id
+            mc.gameover.value = True
+            return
         time.sleep(1)  # Executa a cada 1 segundo
-        with mc.robot_mutex:
-            idx = self.id * 6
-            # Reduz energia diretamente no array compartilhado
-            mc.robot_data[idx + 2] -= 1
-
-            # Verifica energia após redução
-            if mc.robot_data[idx + 2] <= 0:
-                mc.robot_data[idx + 3] = 0  # status = morto
-                self.status = 0
-
-                
+        
+        # Reduz energia diretamente no array compartilhado
+        mc.robot_data[idx + 2] -= 1
+        # Verifica energia após redução
+        if mc.robot_data[idx + 2] <= 0:
+            mc.robot_data[idx + 3] = 0  # status = morto
+    if mc.robot_data[idx + 3] == 0:
+        mc.grid[x*mc.colum+y] = b' '
+        self.status = 0                
+    
   def sense_act(self):
     EMPTY = b' '
     BATTERY = b'*'
     ENERGY_MAX = 100
     MAX_LINE = mc.line
     MAX_COLUM = mc.colum
-
+    movement = self.speed
+    idx = self.id * 6
     while mc.vencedor.value == -1 and self.status == 1:
         time.sleep(random.randint(1, 5) * 0.2)  # Delay de ação conforme a "velocidade"
-
+        
         with mc.grid_mutex, mc.robot_mutex:
-            idx = self.id * 6
-            E = mc.robot_data[idx + 2]
-
-            if E <= 0:
-                mc.robot_data[idx + 3] = 0
-                return
-
+            
+            #Autaliza o status
+            self.status =  mc.robot_data[idx + 3]
             x, y = mc.robot_data[idx + 4], mc.robot_data[idx + 5]
             dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
             nx, ny = x + dx, y + dy
-            if 0 < nx < MAX_LINE and 0 < ny < MAX_COLUM:
-                target = mc.grid[ny * MAX_LINE + nx]
+            if 0 < nx < MAX_LINE-1 and 0 < ny < MAX_COLUM-1:
+                target = mc.grid[nx * MAX_COLUM + ny]
                 if target == EMPTY:
                     # Movimento
                     mc.grid[x * MAX_COLUM + y] = EMPTY
                     mc.grid[nx * MAX_COLUM + ny] = bytes(str(self.id + 1), 'utf-8')
                     mc.robot_data[idx + 4] = nx
                     mc.robot_data[idx + 5] = ny
-                    mc.robot_data[idx + 2] -= 1  # Consome energia
-                    
-                elif target == BATTERY[0]:
+
+                elif target == BATTERY:
                     # Recarrega energia
-                    mc.robot_data[idx + 2] = min(ENERGY_MAX, E + 20)
+                    mc.robot_data[idx + 2] = min(ENERGY_MAX, mc.robot_data[idx + 2] + 20)
 
                 elif target.decode().isdigit():
                     enemy_id = int(target.decode()) - 1
                     if enemy_id != self.id:
+                        print("Duelo")
                         self.duelo(self.id, enemy_id)
-
+                movement -= 1
+                if movement <= 0 or self.status == 0:
+                    self.housekeeping(mc.robot_data[idx + 4], mc.robot_data[idx + 5])
+                    movement = self.speed
 
   def play(self, all_robots):
     with mc.init_mutex.get_lock():

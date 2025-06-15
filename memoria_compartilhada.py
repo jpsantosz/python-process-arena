@@ -15,7 +15,8 @@ robot_data = mp.Array('i', 4 * 6)  # 4 robôs * 6 dados cada
 # Mutexes para controlar o acesso compartilhado
 grid_mutex = mp.Lock()
 robot_mutex = mp.Lock()
-
+#Conta a quantidade de robos vivos
+vivos = mp.Value('i', 0)
 # Controle de fim de jogo
 gameover = mp.Value('b', False)
 #Controla inicio do jogo

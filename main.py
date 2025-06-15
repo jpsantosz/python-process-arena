@@ -18,6 +18,7 @@ if __name__ == "__main__":
         p = mp.Process(target=run_robot, args=(robot, robots))
         p.start()
         processes.append(p)
+        mc.vivos.value += 1
         
     for p in processes:
         p.join()
